@@ -1,0 +1,10 @@
+#!/bin/sh
+
+# Check that argument is a date in format YYYY-MM-DD that is in the future.
+
+ts=$(date -d "$1" +%s)
+now=$(date +%s)
+if test "$ts" -lt "$now" ; then
+	exit 1
+fi
+

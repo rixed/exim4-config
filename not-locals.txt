@@ -1,0 +1,2 @@
+# Enter here a list of all localpart that must not be delivered (before rewriting)
+rixed-notlocal
