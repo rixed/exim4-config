@@ -1,0 +1,26 @@
+#!/bin/sh
+
+getlocal() {
+	exim -brw $1 | grep env-to: | cut -d: -f2
+}
+
+checkmatch() {
+	echo -n "Check $1 -> $2 ..."
+	if test $(getlocal $1) = "$2" ; then
+		echo "ok"
+	else
+		echo "FAIL!"
+		exit 1
+	fi
+}
+
+checkmatch rixed-local@MAIN_LOCAL_DOMAIN rixed@MAIN_LOCAL_DOMAIN
+checkmatch rixed-notlocal@MAIN_LOCAL_DOMAIN fail@MAIN_LOCAL_DOMAIN
+checkmatch rixed-2048-01-21@MAIN_LOCAL_DOMAIN rixed@MAIN_LOCAL_DOMAIN
+checkmatch rixed-1981-12-23@MAIN_LOCAL_DOMAIN fail@MAIN_LOCAL_DOMAIN
+checkmatch rixed-local-2028-01-21@MAIN_LOCAL_DOMAIN rixed@MAIN_LOCAL_DOMAIN
+checkmatch rixed-local-1981-12-23@MAIN_LOCAL_DOMAIN fail@MAIN_LOCAL_DOMAIN
+checkmatch rixed-notlocal-2028-01-21@MAIN_LOCAL_DOMAIN fail@MAIN_LOCAL_DOMAIN
+checkmatch rixed-notlocal-1981-12-23@MAIN_LOCAL_DOMAIN fail@MAIN_LOCAL_DOMAIN
+# should not temper outgoing/forwarded emails
+checkmatch rixed-glopglop@somewhere-else.com rixed-glopglop@somewhere-else.com

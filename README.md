@@ -37,11 +37,11 @@ Makefile
 
 - `make` will build not-locals.dbm from not-locals.txt
 
-- `make install` will reload exim with the new configuration
+- `make DOMAIN=your.domain.com install` will reload exim with the new configuration
 
-- `make check` will test that the rules are in place and will show some
+- `make DOMAIN=your.domain.com check` will test that the rules are in place and will show some
 example of what's to expect. Depending on your configuration you may want
-to replace the user name and/or domain name, though.
+to replace the user name, though.
 
 Enjoy!
 

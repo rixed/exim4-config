@@ -1760,9 +1760,9 @@ begin rewrite
 # The purpose of this is to be able to forge unique email addresses that are
 # valid up to a given point.
 
-\N^(.+)-([0-9]{4}-[0-9]{1,2}-[0-9]{1,2})@\N "${run{/etc/exim4/is-in-future $2}{$1}{fail}}@$domain" T
-\N^([^-]+-.+)@\N ${lookup{$1}dbm{/etc/exim4/not-locals.dbm}{fail}{$1}}@$domain T
-\N^([^-]+)-.*@\N $1@$domain T
+\N^(.+)-([0-9]{4}-[0-9]{1,2}-[0-9]{1,2})@MAIN_LOCAL_DOMAIN\N "${run{/etc/exim4/is-in-future $2}{$1}{fail}}@$domain" T
+\N^([^-]+-.+)@MAIN_LOCAL_DOMAIN\N ${lookup{$1}dbm{/etc/exim4/not-locals.dbm}{fail}{$1}}@$domain T
+\N^([^-]+)-.*@MAIN_LOCAL_DOMAIN\N $1@$domain T
 
 #####################################################
 ### end rewrite/31_exim4-config_rewriting
