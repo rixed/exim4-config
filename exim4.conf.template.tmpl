@@ -155,7 +155,7 @@ message_size_limit = MESSAGE_SIZE_LIMIT
 # scanners. The second modification is in the acl_check_data access
 # control list.
 
-# av_scanner = clamd:/tmp/clamd
+# av_scanner = clamd:/var/run/clamav/clamd.ctl
 
 
 # For spam scanning, there is a similar option that defines the interface to
@@ -520,6 +520,17 @@ acl_check_rcpt:
     hosts = :
     control = dkim_disable_verify
 
+  # Do not try to verify DKIM signatures of incoming mail if DC_minimaldns
+  # or DISABLE_DKIM_VERIFY are set.
+.ifdef DC_minimaldns
+  warn
+    control = dkim_disable_verify
+.else
+.ifdef DISABLE_DKIM_VERIFY
+  warn
+    control = dkim_disable_verify
+.endif
+.endif
 
   # The following section of the ACL is concerned with local parts that contain
   # certain non-alphanumeric characters. Dots in unusual places are
@@ -735,9 +746,9 @@ acl_check_rcpt:
   # as well as outright failures.
   .ifdef CHECK_RCPT_REVERSE_DNS
   warn
-    message = X-Host-Lookup-Failed: Reverse DNS lookup failed for $sender_host_address (${if eq{$host_lookup_failed}{1}{failed}{deferred}})
-     condition = ${if and{{def:sender_host_address}{!def:sender_host_name}}\
+    condition = ${if and{{def:sender_host_address}{!def:sender_host_name}}\
                       {yes}{no}}
+    add_header = X-Host-Lookup-Failed: Reverse DNS lookup failed for $sender_host_address (${if eq{$host_lookup_failed}{1}{failed}{deferred}})
   .endif
 
 
@@ -760,11 +771,12 @@ acl_check_rcpt:
     log_message = SPF check failed.
     !acl = acl_local_deny_exceptions
     condition = ${run{/usr/bin/spfquery.mail-spf-perl --ip \
-                   \"$sender_host_address\" --identity \
+                   ${quote:$sender_host_address} --identity \
                    ${if def:sender_address_domain \
-                       {--scope mfrom  --identity \"$sender_address\"}\
-                       {--scope helo --identity  \"$sender_helo_name\"}}}\
+                       {--scope mfrom  --identity ${quote:$sender_address}}\
+                       {--scope helo --identity ${quote:$sender_helo_name}}}}\
                    {no}{${if eq {$runrc}{1}{yes}{no}}}}
+
   defer
     message = Temporary DNS error while checking SPF record.  Try again later.
     !acl = acl_local_deny_exceptions
@@ -772,7 +784,7 @@ acl_check_rcpt:
 
   warn
     condition = ${if <={$runrc}{6}{yes}{no}}
-    message = Received-SPF: ${if eq {$runrc}{0}{pass}\
+    add_header = Received-SPF: ${if eq {$runrc}{0}{pass}\
                                 {${if eq {$runrc}{2}{softfail}\
                                  {${if eq {$runrc}{3}{neutral}\
 				  {${if eq {$runrc}{4}{permerror}\
@@ -792,9 +804,9 @@ acl_check_rcpt:
   # sender IP addresses
   .ifdef CHECK_RCPT_IP_DNSBLS
   warn
-    message = X-Warning: $sender_host_address is listed at $dnslist_domain ($dnslist_value: $dnslist_text)
-    log_message = $sender_host_address is listed at $dnslist_domain ($dnslist_value: $dnslist_text)
     dnslists = CHECK_RCPT_IP_DNSBLS
+    add_header = X-Warning: $sender_host_address is listed at $dnslist_domain ($dnslist_value: $dnslist_text)
+    log_message = $sender_host_address is listed at $dnslist_domain ($dnslist_value: $dnslist_text)
   .endif
 
 
@@ -807,12 +819,12 @@ acl_check_rcpt:
   #                            : rhsbl.bar.org/$sender_address_domain
   .ifdef CHECK_RCPT_DOMAIN_DNSBLS
   warn
-    message = X-Warning: $sender_address_domain is listed at $dnslist_domain ($dnslist_value: $dnslist_text)
-    log_message = $sender_address_domain is listed at $dnslist_domain ($dnslist_value: $dnslist_text)
     !senders = ${if exists{CONFDIR/local_domain_dnsbl_whitelist}\
                     {CONFDIR/local_domain_dnsbl_whitelist}\
                     {}}
     dnslists = CHECK_RCPT_DOMAIN_DNSBLS
+    add_header = X-Warning: $sender_address_domain is listed at $dnslist_domain ($dnslist_value: $dnslist_text)
+    log_message = $sender_address_domain is listed at $dnslist_domain ($dnslist_value: $dnslist_text)
   .endif
 
 
@@ -914,7 +926,7 @@ acl_check_data:
   #
   # warn
   #   spam = Debian-exim:true
-  #   message = X-Spam_score: $spam_score\n\
+  #   add_header = X-Spam_score: $spam_score\n\
   #             X-Spam_score_int: $spam_score_int\n\
   #             X-Spam_bar: $spam_bar\n\
   #             X-Spam_report: $spam_report
@@ -1618,6 +1630,9 @@ dkim_strict = DKIM_STRICT
 .ifdef DKIM_SIGN_HEADERS
 dkim_sign_headers = DKIM_SIGN_HEADERS
 .endif
+.ifdef TLS_DH_MIN_BITS
+tls_dh_min_bits = TLS_DH_MIN_BITS
+.endif
 #####################################################
 ### end transport/30_exim4-config_remote_smtp
 #####################################################
@@ -1652,6 +1667,9 @@ remote_smtp_smarthost:
 .endif
 .ifdef REMOTE_SMTP_HELO_DATA
   helo_data=REMOTE_SMTP_HELO_DATA
+.endif
+.ifdef TLS_DH_MIN_BITS
+tls_dh_min_bits = TLS_DH_MIN_BITS
 .endif
 #####################################################
 ### end transport/30_exim4-config_remote_smtp_smarthost
@@ -1702,8 +1720,8 @@ begin retry
 # hours, then retries every 6 hours until 4 days have passed since the first
 # failed delivery.
 
-# Please note that these rules only limit the frequenzy of retries, the
-# effective retry-time depends on the frequenzy of queue-running, too.
+# Please note that these rules only limit the frequency of retries, the
+# effective retry-time depends on the frequency of queue-running, too.
 # See QUEUEINTERVAL in /etc/default/exim4.
 
 # Address or Domain    Error       Retries
