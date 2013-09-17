@@ -19,6 +19,11 @@
 #                    MAIN CONFIGURATION SETTINGS                     #
 ######################################################################
 
+# Disable IPv6 lookup so that google SMTP accepts incoming mails.
+# See: "Additional guidelines for IPv6" at:
+# https://support.google.com/mail/answer/81126
+disable_ipv6 = true 
+
 # Just for reference and scripts. 
 # On Debian systems, the main binary is installed as exim4 to avoid
 # conflicts with the exim 3 packages.
