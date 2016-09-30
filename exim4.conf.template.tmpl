@@ -1571,6 +1571,8 @@ maildrop_pipe:
   driver = pipe
   path = "/bin:/usr/bin:/usr/local/bin"
   command = "/usr/bin/maildrop"
+  message_prefix =
+  message_suffix =
   return_path_add
   delivery_date_add
   envelope_to_add
@@ -1601,6 +1603,11 @@ procmail_pipe:
 ### transport/30_exim4-config_remote_smtp
 #################################
 # This transport is used for delivering messages over SMTP connections.
+
+DKIM_CANON = relaxed
+DKIM_SELECTOR = 20160823
+DKIM_DOMAIN = happyleptic.org
+DKIM_PRIVATE_KEY = /etc/exim4/dkim-private.pem
 
 remote_smtp:
   debug_print = "T: remote_smtp for $local_part@$domain"
@@ -1637,6 +1644,12 @@ dkim_sign_headers = DKIM_SIGN_HEADERS
 .endif
 .ifdef TLS_DH_MIN_BITS
 tls_dh_min_bits = TLS_DH_MIN_BITS
+.endif
+.ifdef REMOTE_SMTP_TLS_CERTIFICATE
+tls_certificate = REMOTE_SMTP_TLS_CERTIFICATE
+.endif
+.ifdef REMOTE_SMTP_PRIVATEKEY
+tls_privatekey = REMOTE_SMTP_PRIVATEKEY
 .endif
 #####################################################
 ### end transport/30_exim4-config_remote_smtp
@@ -1675,6 +1688,12 @@ remote_smtp_smarthost:
 .endif
 .ifdef TLS_DH_MIN_BITS
 tls_dh_min_bits = TLS_DH_MIN_BITS
+.endif
+.ifdef REMOTE_SMTP_SMARTHOST_TLS_CERTIFICATE
+tls_certificate = REMOTE_SMTP_SMARTHOST_TLS_CERTIFICATE
+.endif
+.ifdef REMOTE_SMTP_SMARTHOST_PRIVATEKEY
+tls_privatekey = REMOTE_SMTP_SMARTHOST_PRIVATEKEY
 .endif
 #####################################################
 ### end transport/30_exim4-config_remote_smtp_smarthost
@@ -1778,7 +1797,7 @@ begin rewrite
 # So for instance the email user-2015-12-01@your.domain.com will be delivered
 # (to user@your.domain.com) until the first of January 2012, while
 # user-foobar@your.domain.com will get delivered (to user@your.domain.com) only
-# if user-foobar is not listed in /etc/exim4/no-locals.dbm.
+# if user-foobar is not listed in /etc/exim4/not-locals.dbm.
 #
 # The purpose of this is to be able to forge unique email addresses that are
 # valid up to a given point.
@@ -1845,7 +1864,7 @@ begin authenticators
 #   server_set_id = $auth2
 #   server_prompts = :
 #   .ifndef AUTH_SERVER_ALLOW_NOTLS_PASSWORDS
-#   server_advertise_condition = ${if eq{$tls_cipher}{}{}{*}}
+#   server_advertise_condition = ${if eq{$tls_in_cipher}{}{}{*}}
 #   .endif
 
 # LOGIN authentication has traditional prompts and responses. There is no
@@ -1860,7 +1879,7 @@ begin authenticators
 #   server_condition = "${if crypteq{$auth2}{${extract{1}{:}{${lookup{$auth1}lsearch{CONFDIR/passwd}{$value}{*:*}}}}}{1}{0}}"
 #   server_set_id = $auth1
 #   .ifndef AUTH_SERVER_ALLOW_NOTLS_PASSWORDS
-#   server_advertise_condition = ${if eq{$tls_cipher}{}{}{*}}
+#   server_advertise_condition = ${if eq{$tls_in_cipher}{}{}{*}}
 #   .endif
 #
 # cram_md5_server:
@@ -1879,16 +1898,16 @@ begin authenticators
 
 # Authenticate against local passwords using sasl2-bin
 # Requires exim_uid to be a member of sasl group, see README.Debian.gz
-# plain_saslauthd_server:
-#   driver = plaintext
-#   public_name = PLAIN
-#   server_condition = ${if saslauthd{{$auth2}{$auth3}}{1}{0}}
-#   server_set_id = $auth2
-#   server_prompts = :
-#   .ifndef AUTH_SERVER_ALLOW_NOTLS_PASSWORDS
-#   server_advertise_condition = ${if eq{$tls_cipher}{}{}{*}}
-#   .endif
-#
+plain_saslauthd_server:
+  driver = plaintext
+  public_name = PLAIN
+  server_condition = ${if saslauthd{{$auth2}{$auth3}}{1}{0}}
+  server_set_id = $auth2
+  server_prompts = :
+  .ifndef AUTH_SERVER_ALLOW_NOTLS_PASSWORDS
+  server_advertise_condition = ${if eq{$tls_in_cipher}{}{}{*}}
+  .endif
+
 # login_saslauthd_server:
 #   driver = plaintext
 #   public_name = LOGIN
@@ -1897,7 +1916,7 @@ begin authenticators
 #   server_condition = ${if saslauthd{{$auth1}{$auth2}}{1}{0}}
 #   server_set_id = $auth1
 #   .ifndef AUTH_SERVER_ALLOW_NOTLS_PASSWORDS
-#   server_advertise_condition = ${if eq{$tls_cipher}{}{}{*}}
+#   server_advertise_condition = ${if eq{$tls_in_cipher}{}{}{*}}
 #   .endif
 #
 # ntlm_sasl_server:
@@ -1906,7 +1925,7 @@ begin authenticators
 #   server_realm = <short main hostname>
 #   server_set_id = $auth1
 #   .ifndef AUTH_SERVER_ALLOW_NOTLS_PASSWORDS
-#   server_advertise_condition = ${if eq{$tls_cipher}{}{}{*}}
+#   server_advertise_condition = ${if eq{$tls_in_cipher}{}{}{*}}
 #   .endif
 # 
 # digest_md5_sasl_server:
@@ -1915,7 +1934,7 @@ begin authenticators
 #   server_realm = <short main hostname>
 #   server_set_id = $auth1
 #   .ifndef AUTH_SERVER_ALLOW_NOTLS_PASSWORDS
-#   server_advertise_condition = ${if eq{$tls_cipher}{}{}{*}}
+#   server_advertise_condition = ${if eq{$tls_in_cipher}{}{}{*}}
 #   .endif
 
 # Authentcate against cyrus-sasl
@@ -1933,7 +1952,7 @@ begin authenticators
 #   server_realm = <short main hostname>
 #   server_set_id = $auth1
 #   .ifndef AUTH_SERVER_ALLOW_NOTLS_PASSWORDS
-#   server_advertise_condition = ${if eq{$tls_cipher}{}{}{*}}
+#   server_advertise_condition = ${if eq{$tls_in_cipher}{}{}{*}}
 #   .endif
 #
 # login_sasl_server:
@@ -1942,7 +1961,7 @@ begin authenticators
 #   server_realm = <short main hostname>
 #   server_set_id = $auth1
 #   .ifndef AUTH_SERVER_ALLOW_NOTLS_PASSWORDS
-#   server_advertise_condition = ${if eq{$tls_cipher}{}{}{*}}
+#   server_advertise_condition = ${if eq{$tls_in_cipher}{}{}{*}}
 #   .endif
 
 # Authenticate against courier authdaemon
@@ -1961,7 +1980,7 @@ begin authenticators
 #               fail}
 #   server_set_id = $auth2
 #   .ifndef AUTH_SERVER_ALLOW_NOTLS_PASSWORDS
-#   server_advertise_condition = ${if eq{$tls_cipher}{}{}{*}}
+#   server_advertise_condition = ${if eq{$tls_in_cipher}{}{}{*}}
 #   .endif
 
 # login_courier_authdaemon:
@@ -1976,7 +1995,7 @@ begin authenticators
 #               fail}
 #   server_set_id = $auth1
 #   .ifndef AUTH_SERVER_ALLOW_NOTLS_PASSWORDS
-#   server_advertise_condition = ${if eq{$tls_cipher}{}{}{*}}
+#   server_advertise_condition = ${if eq{$tls_in_cipher}{}{}{*}}
 #   .endif
 
 # This one is a bad hack to support the broken version 4.xx of
@@ -1997,7 +2016,7 @@ begin authenticators
 #   server_prompts = User Name : Password
 #   server_condition = no
 #   .ifndef AUTH_SERVER_ALLOW_NOTLS_PASSWORDS
-#   server_advertise_condition = ${if eq{$tls_cipher}{}{}{*}}
+#   server_advertise_condition = ${if eq{$tls_in_cipher}{}{}{*}}
 #   .endif
 
 ##############
@@ -2031,7 +2050,7 @@ plain:
   driver = plaintext
   public_name = PLAIN
 .ifndef AUTH_CLIENT_ALLOW_NOTLS_PASSWORDS
-  client_send = "<; ${if !eq{$tls_cipher}{}\
+  client_send = "<; ${if !eq{$tls_out_cipher}{}\
                     {^${extract{1}{:}{PASSWDLINE}}\
 		     ^${sg{PASSWDLINE}{\\N([^:]+:)(.*)\\N}{\\$2}}\
 		   }fail}"
@@ -2047,7 +2066,7 @@ login:
   # Return empty string if not non-TLS AND looking up $host in passwd-file
   # yields a non-empty string; fail otherwise.
   client_send = "<; ${if and{\
-                          {!eq{$tls_cipher}{}}\
+                          {!eq{$tls_out_cipher}{}}\
                           {!eq{PASSWDLINE}{}}\
                          }\
                       {}fail}\
