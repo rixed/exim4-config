@@ -54,7 +54,6 @@ domainlist relay_to_domains = MAIN_RELAY_TO_DOMAINS
 # anything here.
 hostlist relay_from_hosts = MAIN_RELAY_NETS
 
-
 # Decide which domain to use to add to all unqualified addresses.
 # If MAIN_PRIMARY_HOSTNAME_AS_QUALIFY_DOMAIN is defined, the primary
 # hostname is used. If not, but MAIN_QUALIFY_DOMAIN is set, the value
@@ -968,6 +967,15 @@ begin routers
 #####################################################
 ### end router/00_exim4-config_header
 #####################################################
+
+from_booking:
+  debug_print = "R: from_booking"
+  driver = manualroute
+  domains = !+local_domains
+  senders = cedric.cellier@booking.com
+  route_data = exsmtp-eur.booking.com::587
+  transport = remote_smtp
+
 #####################################################
 ### router/100_exim4-config_domain_literal
 #####################################################
@@ -1016,6 +1024,7 @@ hubbed_hosts:
 #####################################################
 ### end router/150_exim4-config_hubbed_hosts
 #####################################################
+
 #####################################################
 ### router/200_exim4-config_primary
 #####################################################
