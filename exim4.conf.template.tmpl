@@ -105,6 +105,11 @@ CHECK_RCPT_REMOTE_LOCALPARTS = ^[./|] : ^.*[@%!`#&?] : ^.*/\\.\\./
 .ifndef MAIN_LOG_SELECTOR
 MAIN_LOG_SELECTOR = +tls_peerdn
 .endif
+
+# stripping environment
+add_environment = <; PATH=/sbin:/usr/sbin:/bin:/usr/bin
+keep_environment =
+
 #####################################################
 ### end main/01_exim4-config_listmacrosdefs
 #####################################################
@@ -973,8 +978,18 @@ from_booking:
   driver = manualroute
   domains = !+local_domains
   senders = cedric.cellier@booking.com
-  route_data = exsmtp-eur.booking.com::587
-  transport = remote_smtp
+#  route_data = smtp.gmail.com::465
+  route_data = smtp.gmail.com::587
+  transport = remote_smtp_smarthost
+#  route_data = exsmtp-eur.booking.com::587
+
+from_securactive:
+  debug_print = "R: from_securactive"
+  driver = manualroute
+  domains = !+local_domains
+  senders = cedric.cellier@securactive.net
+  route_data = smtp.gmail.com::587
+  transport = remote_smtp_smarthost
 
 #####################################################
 ### router/100_exim4-config_domain_literal
@@ -1677,12 +1692,13 @@ tls_privatekey = REMOTE_SMTP_PRIVATEKEY
 remote_smtp_smarthost:
   debug_print = "T: remote_smtp_smarthost for $local_part@$domain"
   driver = smtp
-  hosts_try_auth = <; ${if exists{CONFDIR/passwd.client} \
+  hosts_require_auth = <; ${if exists{CONFDIR/passwd.client} \
         {\
         ${lookup{$host}nwildlsearch{CONFDIR/passwd.client}{$host_address}}\
         }\
         {} \
       }
+  tls_tempfail_tryclear = false
 .ifdef REMOTE_SMTP_SMARTHOST_HOSTS_AVOID_TLS
   hosts_avoid_tls = REMOTE_SMTP_SMARTHOST_HOSTS_AVOID_TLS
 .endif
@@ -1812,7 +1828,7 @@ begin rewrite
 # valid up to a given point.
 
 \N^(.+)-([0-9]{4}-[0-9]{1,2}-[0-9]{1,2})@MAIN_LOCAL_DOMAIN\N "${run{/etc/exim4/is-in-future $2}{$1}{fail}}@$domain" T
-\N^([^-]+-.+)@MAIN_LOCAL_DOMAIN\N ${lookup{$1}dbm{/etc/exim4/not-locals.dbm}{fail}{$1}}@$domain T
+\N^([^-]+-.+)@MAIN_LOCAL_DOMAIN\N ${lookup{$1}lsearch{/etc/exim4/not-locals}{fail}{$1}}@$domain T
 \N^([^-]+)-.*@MAIN_LOCAL_DOMAIN\N $1@$domain T
 
 #####################################################
